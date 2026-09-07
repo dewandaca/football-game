@@ -1,36 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ⚽ Football AI Games Platform
 
-## Getting Started
+**Football AI Games** adalah platform web interaktif bertema sepak bola yang ditenagai oleh **AI (Groq API)**. Aplikasi ini menghadirkan dua mode permainan utama yang seru, dramatis, dan sangat cocok dimainkan bersama teman secara lokal maupun 1v1.
 
-First, run the development server:
+---
 
+## 🚀 Fitur & Mode Permainan
+
+### 1. 🎤 Family 100 Sepak Bola (Football Survey Quiz)
+Game kuis interaktif berformat Family 100 yang menyajikan pertanyaan-pertanyaan unik seputar dunia sepak bola.
+- **AI-Powered Survey Generation**: Pertanyaan dan 5 jawaban teratas dihasilkan secara dinamis menggunakan model **Groq AI** (`openai/gpt-oss-120b`).
+- **Interactive Game Board**: Papan skor dengan animasi kartu terbalik (*reveal animation*) saat jawaban benar ditebak.
+- **System 3 Strikes**: Peringatan visual dan suara *strike* ketika tebakan salah.
+- **Topik Kustom**: Pilihan topik kuis siap pakai atau buat topik sepak bola kustom kamu sendiri.
+- **Tombol Reset Game**: Fitur reset instan untuk memulai kuis baru kapan saja.
+
+---
+
+### 2. ⚔️ 1v1 Draft Auction & Simulasi Match OSM (Online Soccer Manager)
+Mode duel 1 lawan 1 yang menggabungkan strategi lelang bursa transfer pemain sepak bola asli dengan simulasi pertandingan bergaya **OSM**.
+
+#### 💰 Phase 1: Lelang Bursa Transfer (1v1 Auction Arena)
+- **Pilihan Tier Anggaran & Tema Skuad**:
+  - ⭐ *Pemain Top Dunia* (Bintang papan atas seperti Mbappe, Haaland, Bellingham).
+  - 🔄 *Campuran* (Kombinasi pemain superstar & underrated).
+  - 💎 *Underrated & Bakat Nyata* (Pemain profesional asli non-mainstream).
+- **Sistem Adu Lelang Real-Time**:
+  - Penawaran harga terbuka (*Open Bidding*) yang bisa diisi secara bebas di atas harga tertinggi saat ini.
+  - Opsi menyerahkan penawaran (*Pass*) jika harga sudah terlalu mahal.
+  - Pengelolaan uang anggaran (*Budget Management*).
+  - **Aturan Kebangkrutan**: Pemain yang kehabisan uang sebelum memnuhi skuad 11 pemain otomatis dinyatakan kalah!
+
+#### ⚽ Phase 2: Simulasi Pertandingan Dramatis OSM
+- **Rating Skuad Otomatis**: Menghitung rating Serangan (ATT), Lini Tengah (MID), dan Pertahanan (DEF) secara realistis dari 11 pemain hasil lelang.
+- **Live Commentary Feed**:
+  - Teks komentar jalannya pertandingan yang diperbarui secara real-time.
+  - **Auto-Scroll Khusus Container**: Teks komentar otomatis bergulir ke bawah di dalam kotak komentar tanpa menggeser tampilan posisi layar browser utama.
+- **Event Random Dinamis (Variatif & Tidak Repetitif)**:
+  - 🎥 Wasit Meninjau VAR (Keputusan penalti / gol dianulir).
+  - 🨨 / 🟥 Kartu Kuning & Kartu Merah Langsung.
+  - ✋ Pelanggaran Handsball & Peluang Tendangan Bebas.
+  - 🚩 Offside & Tekel Krusial Pemutus Serangan.
+  - 😱 Bola Menghantam Tiang / Mistar Gawang.
+  - 🧤 Penyelamatan Akrobatik Kiper.
+- **Aturan Tanpa Seri (No Draws)**: Jika skor imbang hingga menit 90', pertandingan berlanjut ke **Babak Adu Penalti (Penalty Shootout)** dengan indikator visual tendangan penalti.
+- **Statistik & Man of the Match (MOTM)**: Penguasaan bola, total tembakan, akurasi umpan, dan MOTM terkunci selama pertandingan dan baru dirilis resmi setelah peluit panjang berbunyi!
+- **Kontrol Kecepatan Pacing**: Pilih kecepatan simulasi Santai (2.5s), Sedang (1.5s), atau Cepat (0.8s), serta tombol *Langsung Hasil Akhir*.
+
+---
+
+## 🛠️ Teknologi & Stack
+
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router), [React 19](https://react.dev/)
+- **Bahasa**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [TailwindCSS v4](https://tailwindcss.com/), Glassmorphic Dark UI & CSS Custom Animations
+- **Animasi & Efek**: [Framer Motion](https://www.framer.com/motion/), [Canvas Confetti](https://www.npmjs.com/package/canvas-confetti)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **AI Integrasi**: [Groq SDK](https://groq.com/) (`openai/gpt-oss-120b` & `openai/gpt-oss-20b`)
+- **Validasi Schema**: [Zod](https://zod.dev/)
+
+---
+
+## 📦 Instalasi & Pengaturan Lokal
+
+### 1. Prerequisites
+Pastikan kamu telah menginstal:
+- [Node.js](https://nodejs.org/) v18.0 atau lebih baru.
+- npm / yarn / pnpm.
+
+### 2. Clone Repository & Install Dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd football-ai-games
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Konfigurasi Environment Variables
+Buat file `.env.local` di direktori utama (root) proyek dan tambahkan API Key dari Groq:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+GROQ_API_KEY=your_groq_api_key_here
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> 💡 *Kamu bisa mendapatkan Groq API Key secara gratis di [console.groq.com](https://console.groq.com/).*
 
-## Learn More
+### 4. Jalankan Server Pengembang (Development Server)
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Buka browser dan akses [http://localhost:3000](http://localhost:3000).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📁 Struktur Direktori Utama
 
-## Deploy on Vercel
+```
+football-ai-games/
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   └── groq/
+│   │   │       ├── generate-survey/   # Endpoint AI kuis Family 100
+│   │   │       ├── generate-draft/    # Endpoint AI generasi opsi pemain lelang
+│   │   │       └── suggest-topic/     # Endpoint AI saran topik kuis
+│   │   ├── game/
+│   │   │   ├── family-survey/         # Halaman Game Family 100
+│   │   │   └── draft-auction/          # Halaman Game 1v1 Draft & OSM
+│   │   ├── layout.tsx
+│   │   └── page.tsx                   # Landing Page / Menu Utama
+│   ├── components/
+│   │   ├── common/                    # Button, Navbar, Header, Footer
+│   │   ├── draft/                     # AuctionArena, BudgetSetupModal, OSMMatchSimulation, MiniPitch
+│   │   └── family/                    # SurveyBoard, StrikeOverlay, TopicSelector
+│   ├── types/                         # Game State & Player Interfaces
+│   └── lib/                           # Helper & Groq client initialization
+├── .env.local                         # File Kunci API Groq
+└── README.md
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📝 Lisensi
+
+Aplikasi ini dikembangkan untuk keperluan hiburan, edukasi, dan eksperimen kecerdasan buatan dalam game sepak bola.
