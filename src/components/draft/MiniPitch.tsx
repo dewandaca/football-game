@@ -1,41 +1,35 @@
 'use client';
 
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { FootballPlayer } from '@/types/game';
+import { FootballPlayer, FormationId } from '@/types/game';
 import { getPositionColor } from '@/lib/utils';
-
-// 4-3-3 formation layout: [row, col] grid positions (0-indexed, 5 cols)
-const FORMATION_LAYOUT: { position: string; row: number; col: number }[] = [
-  { position: 'GK', row: 5, col: 2 },
-  { position: 'LB', row: 4, col: 0 },
-  { position: 'CB', row: 4, col: 1 },
-  { position: 'CB', row: 4, col: 3 },
-  { position: 'RB', row: 4, col: 4 },
-  { position: 'CM', row: 2, col: 0 },
-  { position: 'CDM', row: 3, col: 2 },
-  { position: 'CM', row: 2, col: 4 },
-  { position: 'LW', row: 1, col: 0 },
-  { position: 'ST', row: 0, col: 2 },
-  { position: 'RW', row: 1, col: 4 },
-];
+import { getFormation } from '@/lib/matchEngine/formations';
 
 interface MiniPitchProps {
   squad: FootballPlayer[];
   label: string;
   color: 'blue' | 'red';
+  formation?: FormationId;
 }
 
-export default function MiniPitch({ squad, label, color }: MiniPitchProps) {
+export default function MiniPitch({ squad, label, color, formation = '4-3-3' }: MiniPitchProps) {
   const colorClass = color === 'blue' ? '#3B82F6' : '#EF4444';
 
-  // Map squad by position index (in order of FORMATION_LAYOUT)
-  const squadBySlot: (FootballPlayer | null)[] = FORMATION_LAYOUT.map((slot, i) => {
-    // Find the i-th player that matches the position
-    const positionMatches = squad.filter((p) => p.position === slot.position);
-    // Count how many of this position appeared before in FORMATION_LAYOUT
-    const prevCount = FORMATION_LAYOUT.slice(0, i).filter((s) => s.position === slot.position).length;
-    return positionMatches[prevCount] ?? null;
-  });
+  // Get formation layout
+  const formationDef = useMemo(() => getFormation(formation), [formation]);
+  const slots = formationDef.slots;
+
+  // Map squad by position index (in order of formation slots)
+  const squadBySlot: (FootballPlayer | null)[] = useMemo(() => {
+    return slots.map((slot, i) => {
+      // Find the i-th player that matches the position
+      const positionMatches = squad.filter((p) => p.position === slot.position);
+      // Count how many of this position appeared before in slots
+      const prevCount = slots.slice(0, i).filter((s) => s.position === slot.position).length;
+      return positionMatches[prevCount] ?? null;
+    });
+  }, [squad, slots]);
 
   return (
     <div className="rounded-2xl overflow-hidden ring-1 ring-white/10">
@@ -44,7 +38,7 @@ export default function MiniPitch({ squad, label, color }: MiniPitchProps) {
         className="px-3 py-2 text-xs font-bold text-center"
         style={{ backgroundColor: `${colorClass}20`, color: colorClass }}
       >
-        {color === 'blue' ? '🔵' : '🔴'} {label} ({squad.length}/11)
+        {color === 'blue' ? '🔵' : '🔴'} {label} ({squad.length}/11) • {formation}
       </div>
 
       {/* Pitch */}
@@ -70,10 +64,13 @@ export default function MiniPitch({ squad, label, color }: MiniPitchProps) {
         </svg>
 
         {/* Player slots */}
-        {FORMATION_LAYOUT.map((slot, i) => {
+        {slots.map((slot, i) => {
           const player = squadBySlot[i];
-          const xPct = (slot.col / 4) * 80 + 10; // 10% to 90%
-          const yPct = (slot.row / 5) * 80 + 8;  // 8% to 88%
+          // Map formation coordinates to pitch visual:
+          // slot.x 0-100 → visual x 10%-90%
+          // slot.y 0-100 (own goal to opponent goal) → visual y 88% to 8% (flip for display, top=attack)
+          const xPct = 10 + (slot.x / 100) * 80;
+          const yPct = 88 - (slot.y / 100) * 80;
           const posColor = getPositionColor(slot.position);
 
           return (

@@ -1,18 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutList, RotateCcw, Trophy, AlertTriangle, Play } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useDraftAuctionStore } from '@/stores/useDraftAuctionStore';
 import BudgetSetupModal from '@/components/draft/BudgetSetupModal';
 import DraftAuctionArena from '@/components/draft/DraftAuctionArena';
-import OSMMatchSimulation from '@/components/draft/OSMMatchSimulation';
+import PreMatchSetup from '@/components/draft/PreMatchSetup';
+import MatchLive from '@/components/match/MatchLive';
 import MiniPitch from '@/components/draft/MiniPitch';
 import SquadListDrawer from '@/components/draft/SquadListDrawer';
 import Button from '@/components/common/Button';
-import { DraftAuctionState, DraftPair } from '@/types/game';
+import { DraftAuctionState, DraftPair, MatchResult } from '@/types/game';
 import { formatCurrency } from '@/lib/utils';
+import { simulateMatch } from '@/lib/matchEngine/simulateMatch';
+import { autoAssignPlayers } from '@/lib/matchEngine/formations';
 
 export default function DraftAuctionPage() {
   const [mounted, setMounted] = useState(false);
@@ -25,7 +28,7 @@ export default function DraftAuctionPage() {
   }, []);
 
   useEffect(() => {
-    if (game.gameStatus === 'completed' || game.gameStatus === 'simulation') {
+    if (game.gameStatus === 'completed') {
       confetti({
         particleCount: 150,
         spread: 80,
@@ -49,6 +52,9 @@ export default function DraftAuctionPage() {
     );
   }
 
+  // =====================================================
+  // SETUP SCREEN
+  // =====================================================
   if (game.gameStatus === 'setup') {
     return (
       <BudgetSetupModal
@@ -59,22 +65,120 @@ export default function DraftAuctionPage() {
     );
   }
 
-  if (game.gameStatus === 'simulation') {
+  // =====================================================
+  // PRE-MATCH SETUP (FORMATION + TACTICS)
+  // =====================================================
+  if (game.gameStatus === 'prematch') {
     return (
-      <div className="min-h-[calc(100vh-64px)] py-6">
-        <OSMMatchSimulation
-          player1={game.player1}
-          player2={game.player2}
+      <div className="min-h-[calc(100vh-64px)]">
+        <PreMatchSetup
+          player1Name={game.player1.name}
+          player2Name={game.player2.name}
+          player1Squad={game.player1.squad}
+          player2Squad={game.player2.squad}
+          formation1={game.formation1}
+          formation2={game.formation2}
+          tactics1={game.tactics1}
+          tactics2={game.tactics2}
+          assignments1={game.playerAssignment1}
+          assignments2={game.playerAssignment2}
+          onFormationChange={(pk, f) => game.setFormation(pk, f)}
+          onTacticsChange={(pk, t) => game.setTactics(pk, t)}
+          onAssignmentsChange={(pk, a) => game.setPlayerAssignment(pk, a)}
+          onStartMatch={() => {
+            // Ensure assignments exist
+            let a1 = game.playerAssignment1;
+            let a2 = game.playerAssignment2;
+            if (a1.length !== 11) {
+              a1 = autoAssignPlayers(game.player1.squad, game.formation1);
+              game.setPlayerAssignment('player1', a1);
+            }
+            if (a2.length !== 11) {
+              a2 = autoAssignPlayers(game.player2.squad, game.formation2);
+              game.setPlayerAssignment('player2', a2);
+            }
+
+            // Run simulation
+            const result = simulateMatch(
+              {
+                name: game.player1.name,
+                squad: game.player1.squad,
+                formation: game.formation1,
+                tactics: game.tactics1,
+                assignments: a1,
+              },
+              {
+                name: game.player2.name,
+                squad: game.player2.squad,
+                formation: game.formation2,
+                tactics: game.tactics2,
+                assignments: a2,
+              },
+              0, // random seed
+              true // include debug info
+            );
+
+            game.setMatchResult(result);
+            game.startMatchSimulation();
+          }}
           onResetDraft={game.resetDraft}
         />
       </div>
     );
   }
 
-  if (game.gameStatus === 'completed') {
+  // =====================================================
+  // MATCH SIMULATION & RESULTS (LIVE 2D ANIMATION + DIRECT RESULTS)
+  // =====================================================
+  if ((game.gameStatus === 'simulation' || game.gameStatus === 'completed') && game.matchResult) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] py-6">
+        <MatchLive
+          matchResult={game.matchResult}
+          homeSquad={game.player1.squad}
+          awaySquad={game.player2.squad}
+          homeAssignments={game.playerAssignment1}
+          awayAssignments={game.playerAssignment2}
+          initialFinished={game.gameStatus === 'completed'}
+          onReplay={() => {
+            // Re-simulate with new seed
+            const newResult = simulateMatch(
+              {
+                name: game.player1.name,
+                squad: game.player1.squad,
+                formation: game.formation1,
+                tactics: game.tactics1,
+                assignments: game.playerAssignment1,
+              },
+              {
+                name: game.player2.name,
+                squad: game.player2.squad,
+                formation: game.formation2,
+                tactics: game.tactics2,
+                assignments: game.playerAssignment2,
+              },
+              0,
+              true
+            );
+            game.setMatchResult(newResult);
+          }}
+          onBackToSetup={() => game.goToPreMatch()}
+          onNewDraft={() => game.resetDraft()}
+        />
+      </div>
+    );
+  }
+
+  // =====================================================
+  // COMPLETED (BANKRUPTCY — no match result)
+  // =====================================================
+  if (game.gameStatus === 'completed' && !game.matchResult) {
     return <DraftCompletedScreen game={game} />;
   }
 
+  // =====================================================
+  // DRAFTING
+  // =====================================================
   const currentPair = game.draftPairs[game.currentRoundIndex];
 
   return (
@@ -327,10 +431,10 @@ function DraftCompletedScreen({ game }: { game: DraftAuctionState }) {
               fullWidth
               size="lg"
               variant="primary"
-              onClick={game.startMatchSimulation}
+              onClick={() => game.goToPreMatch()}
             >
               <Play size={16} />
-              Mainkan Simulasi Match OSM
+              Persiapan Pertandingan
             </Button>
           )}
 

@@ -1,6 +1,16 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { BidLogEntry, DraftAuctionState, DraftPair, FootballPlayer } from '@/types/game';
+import {
+  BidLogEntry,
+  DraftAuctionState,
+  DraftPair,
+  FootballPlayer,
+  FormationId,
+  TacticalSetup,
+  PlayerSlotAssignment,
+  MatchResult,
+  DEFAULT_TACTICS,
+} from '@/types/game';
 
 const defaultPlayer = {
   name: '',
@@ -23,6 +33,17 @@ const defaultState = {
   bidHistory: [] as BidLogEntry[],
   lastRoundWinnerMessage: null as string | null,
   bankruptPlayer: null as 'player1' | 'player2' | null,
+
+  // Pre-match setup state
+  formation1: '4-3-3' as FormationId,
+  formation2: '4-3-3' as FormationId,
+  tactics1: { ...DEFAULT_TACTICS } as TacticalSetup,
+  tactics2: { ...DEFAULT_TACTICS } as TacticalSetup,
+  playerAssignment1: [] as PlayerSlotAssignment[],
+  playerAssignment2: [] as PlayerSlotAssignment[],
+
+  // Match result
+  matchResult: null as MatchResult | null,
 };
 
 export const useDraftAuctionStore = create<DraftAuctionState>()(
@@ -53,6 +74,13 @@ export const useDraftAuctionStore = create<DraftAuctionState>()(
           bidHistory: [],
           lastRoundWinnerMessage: null,
           bankruptPlayer: null,
+          formation1: '4-3-3',
+          formation2: '4-3-3',
+          tactics1: { ...DEFAULT_TACTICS },
+          tactics2: { ...DEFAULT_TACTICS },
+          playerAssignment1: [],
+          playerAssignment2: [],
+          matchResult: null,
         });
       },
 
@@ -105,7 +133,6 @@ export const useDraftAuctionStore = create<DraftAuctionState>()(
 
       surrenderAuction: (playerKey: 'player1' | 'player2') => {
         const {
-          currentTurn,
           currentHighestBid,
           currentHighestBidder,
           player1,
@@ -142,8 +169,6 @@ export const useDraftAuctionStore = create<DraftAuctionState>()(
         const isLastRound = currentRoundIndex >= draftPairs.length - 1;
 
         // Bankruptcy check:
-        // If a player runs out of money (budgetRemaining <= 0) before completing 11 players (squad.length < 11),
-        // or if they have insufficient money for remaining draft rounds, check if bankrupt!
         let bankruptKey: 'player1' | 'player2' | null = null;
 
         if (updatedPlayer1.budgetRemaining <= 0 && updatedPlayer1.squad.length < draftPairs.length) {
@@ -181,18 +206,18 @@ export const useDraftAuctionStore = create<DraftAuctionState>()(
           return;
         }
 
-        // Standard round advancement or simulation transition
+        // Standard round advancement — go to prematch when last round done
         set({
           player1: updatedPlayer1,
           player2: updatedPlayer2,
           currentRoundIndex: nextRoundIndex,
           startingTurn: isLastRound ? startingTurn : nextStartingTurn,
-          currentTurn: isLastRound ? currentTurn : nextStartingTurn,
+          currentTurn: isLastRound ? startingTurn : nextStartingTurn,
           currentHighestBid: nextBasePrice,
           currentHighestBidder: null,
           bidHistory: [newLogEntry, ...bidHistory],
           lastRoundWinnerMessage: msg,
-          gameStatus: isLastRound ? 'simulation' : 'drafting',
+          gameStatus: isLastRound ? 'prematch' : 'drafting',
         });
       },
 
@@ -219,7 +244,7 @@ export const useDraftAuctionStore = create<DraftAuctionState>()(
             },
             currentTurn: nextTurn,
             currentRoundIndex: isLastRound ? currentRoundIndex : currentRoundIndex + 1,
-            gameStatus: isLastRound ? 'simulation' : 'drafting',
+            gameStatus: isLastRound ? 'prematch' : 'drafting',
           });
         } else {
           set({
@@ -230,13 +255,39 @@ export const useDraftAuctionStore = create<DraftAuctionState>()(
             },
             currentTurn: nextTurn,
             currentRoundIndex: isLastRound ? currentRoundIndex : currentRoundIndex + 1,
-            gameStatus: isLastRound ? 'simulation' : 'drafting',
+            gameStatus: isLastRound ? 'prematch' : 'drafting',
           });
         }
       },
 
+      goToPreMatch: () => {
+        set({ gameStatus: 'prematch', matchResult: null });
+      },
+
+      setFormation: (playerKey: 'player1' | 'player2', formation: FormationId) => {
+        if (playerKey === 'player1') set({ formation1: formation });
+        else set({ formation2: formation });
+      },
+
+      setTactics: (playerKey: 'player1' | 'player2', tactics: Partial<TacticalSetup>) => {
+        if (playerKey === 'player1') {
+          set({ tactics1: { ...get().tactics1, ...tactics } });
+        } else {
+          set({ tactics2: { ...get().tactics2, ...tactics } });
+        }
+      },
+
+      setPlayerAssignment: (playerKey: 'player1' | 'player2', assignments: PlayerSlotAssignment[]) => {
+        if (playerKey === 'player1') set({ playerAssignment1: assignments });
+        else set({ playerAssignment2: assignments });
+      },
+
       startMatchSimulation: () => {
         set({ gameStatus: 'simulation' });
+      },
+
+      setMatchResult: (result: MatchResult) => {
+        set({ matchResult: result });
       },
 
       resetDraft: () =>
