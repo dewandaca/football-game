@@ -161,10 +161,10 @@ export default function MatchLive({
       return ev.type === 'extraTimeFulltime' ? 'EXTRA TIME SELESAI' : `EXTRA TIME 2 • ${ev.minute}'`;
     }
     if (ev.type === 'halftime') return 'BABAK 1 SELESAI';
-    if (ev.type === 'fulltime') return matchResult.wentToExtraTime ? '90 MENIT IMBANG' : 'SELESAI';
+    if (ev.type === 'fulltime') return ev.homeScore === ev.awayScore ? '90 MENIT IMBANG' : 'SELESAI';
     if (ev.period === 'secondHalf') return `BABAK 2 • ${ev.minute}'${ev.injuryTime ? '+' : ''}`;
     return `BABAK 1 • ${ev.minute}'${ev.injuryTime ? '+' : ''}`;
-  }, [currentEvent, matchResult.wentToExtraTime]);
+  }, [currentEvent]);
 
   // Real-time cumulative match statistics
   const runningStats = useMemo(() => {
@@ -249,7 +249,13 @@ export default function MatchLive({
     return { homeKicks, awayKicks };
   }, [events, currentEventIndex]);
 
-  const hasShootoutActive = currentEvent.period === 'penalties' || matchResult.wentToPenalties;
+  // Penalty shootout tracker is ONLY visible when the match has actually reached the penalty shootout phase (no spoilers!)
+  const isShootoutActive =
+    currentEvent.period === 'penalties' ||
+    currentEvent.type === 'penaltyShootoutStart' ||
+    currentEvent.type === 'penaltyKick' ||
+    currentEvent.type === 'penaltyShootoutEnd' ||
+    (isFinished && !!matchResult.wentToPenalties);
 
   // Normalized momentum (-100 to +100) -> width percentage for home and away
   const momentumHomePct = Math.max(15, Math.min(85, 50 + (currentEvent.momentum || 0) * 0.4));
@@ -306,8 +312,8 @@ export default function MatchLive({
               <span>{currentEvent.awayScore}</span>
             </motion.div>
 
-            {/* Penalty Score Subtitle if Shootout */}
-            {hasShootoutActive && (
+            {/* Penalty Score Subtitle only when Shootout has actually started */}
+            {isShootoutActive && (
               <motion.div
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -517,8 +523,8 @@ export default function MatchLive({
         })()}
       </AnimatePresence>
 
-      {/* PENALTY SHOOTOUT PROGRESS TRACKER (VISIBLE DURING OR AFTER SHOOTOUT) */}
-      {hasShootoutActive && (
+      {/* PENALTY SHOOTOUT PROGRESS TRACKER (VISIBLE ONLY ONCE SHOOTOUT ACTUALLY STARTS) */}
+      {isShootoutActive && (
         <div className="p-3.5 rounded-xl bg-slate-900/90 border border-amber-500/30 shadow-xl">
           <div className="flex items-center justify-between text-xs font-bold text-amber-400 mb-2">
             <span className="flex items-center gap-1.5">
